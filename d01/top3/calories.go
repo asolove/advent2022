@@ -40,8 +40,7 @@ func main() {
 	}
 	// Would be nice to not have to run this separately for final round without newline
 	a, b, c = topThree(currentTotal, a, b, c);
-	currentTotal = 0;
 
-	fmt.Printf("%d %d %d %d\n", a + b + c, a, b, c);
+	fmt.Printf("%d\n", a + b + c);
 	return;
 }
