@@ -89,17 +89,43 @@ func readMyMove(r rune) (Move, error) {
   return Rock, errors.Errorf("Invalid self move: %r", r);
 }
 
+func readOutcome(r rune) (Outcome, error) {
+  switch r {
+  case 'X':
+    return LOSE, nil;
+  case 'Y':
+    return DRAW, nil;
+  case 'Z':
+    return WIN, nil;
+  }
+  return LOSE, errors.Errorf("Invalid self move: %r", r);
+}
+
+func findMyMove(opponentMove Move, desiredOutcome Outcome) (Move, error) {
+  moves := []Move{Rock, Paper, Scissors};
+  for _, move := range moves {
+    if outcome(opponentMove, move) == desiredOutcome {
+      return move, nil;
+    }
+  }
+  return Rock, errors.Errorf("Cannot findMyMove");
+}
+
 func main() {
   totalScore := 0;
 	s := bufio.NewScanner(os.Stdin);
 	for s.Scan() {
     line := s.Text();
     var opponentMove, myMove Move;
+    var desiredOutcome Outcome;
     var err error;
     if opponentMove, err = readOpponentMove(rune(line[0])); err != nil {
       log.Fatal(err);
     }
-    if myMove, err = readMyMove(rune(line[2])); err != nil {
+    if desiredOutcome, err = readOutcome(rune(line[2])); err != nil {
+      log.Fatal(err);
+    }
+    if myMove, err = findMyMove(opponentMove, desiredOutcome); err != nil {
       log.Fatal(err);
     }
     totalScore += scoreGame(opponentMove, myMove);
