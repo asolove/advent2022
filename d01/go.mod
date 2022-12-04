@@ -1,3 +1,3 @@
-module adamsolove.com/advent2022/d01
+module github.com/asolove/advent2022/d01
 
 go 1.19
