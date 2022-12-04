@@ -25,13 +25,7 @@ func parse(line string) (int, int, int, int) {
 }
 
 func contains(aMin, aMax, bMin, bMax int) bool {
-	if aMin <= bMin && aMax >= bMax {
-		return true
-	}
-	if bMin <= aMin && bMax >= aMax {
-		return true
-	}
-	return false
+	return (aMin <= bMin && aMax >= bMax) || (bMin <= aMin && bMax >= aMax)
 }
 
 func overlaps(aMin, aMax, bMin, bMax int) bool {
