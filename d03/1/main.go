@@ -56,5 +56,5 @@ func main() {
 		duplicatedItem := inBothSides(left, right)
 		totalPriority += itemPriority(duplicatedItem)
 	}
-	fmt.Printf("Total priority of duplicated items: %d", totalPriority)
+	fmt.Printf("Total priority of duplicated items: %d\n", totalPriority)
 }

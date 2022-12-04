@@ -3,9 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/pkg/errors"
 	"log"
 	"os"
+
+	"github.com/pkg/errors"
 )
 
 type Move int
@@ -20,8 +21,8 @@ type Outcome int
 
 const (
 	LOSE Outcome = -1
-	DRAW         = 0
-	WIN          = 1
+	DRAW Outcome = 0
+	WIN  Outcome = 1
 )
 
 const (
@@ -74,7 +75,7 @@ func readOpponentMove(r rune) (Move, error) {
 	case 'C':
 		return Scissors, nil
 	}
-	return Rock, errors.Errorf("Invalid opponent move: %r", r)
+	return Rock, errors.Errorf("Invalid opponent move: %c", r)
 }
 
 func readMyMove(r rune) (Move, error) {
@@ -86,7 +87,7 @@ func readMyMove(r rune) (Move, error) {
 	case 'Z':
 		return Scissors, nil
 	}
-	return Rock, errors.Errorf("Invalid self move: %r", r)
+	return Rock, errors.Errorf("Invalid self move: %c", r)
 }
 
 func readOutcome(r rune) (Outcome, error) {
@@ -98,7 +99,7 @@ func readOutcome(r rune) (Outcome, error) {
 	case 'Z':
 		return WIN, nil
 	}
-	return LOSE, errors.Errorf("Invalid self move: %r", r)
+	return LOSE, errors.Errorf("Invalid self move: %c", r)
 }
 
 func findMyMove(opponentMove Move, desiredOutcome Outcome) (Move, error) {

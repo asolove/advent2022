@@ -57,5 +57,5 @@ func main() {
 		item := badgeItem(r1, r2, r3)
 		totalPriority += itemPriority(item)
 	}
-	fmt.Printf("Total priority of duplicated items: %d", totalPriority)
+	fmt.Printf("Total priority of duplicated items: %d\n", totalPriority)
 }
