@@ -20,7 +20,7 @@ func byteSet(content string) map[rune]bool {
 }
 
 func overlap(s1, s2 map[rune]bool) rune {
-	for k, _ := range s1 {
+	for k := range s1 {
 		if s2[k] {
 			return k
 		}

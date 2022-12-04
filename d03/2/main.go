@@ -16,7 +16,7 @@ func byteSet(content string) map[rune]bool {
 
 func intersect(s1, s2 map[rune]bool) map[rune]bool {
 	r := make(map[rune]bool)
-	for k, _ := range s1 {
+	for k := range s1 {
 		if s2[k] {
 			r[k] = true
 		}
@@ -29,7 +29,7 @@ func badgeItem(r1, r2, r3 string) rune {
 	s2 := byteSet(r2)
 	s3 := byteSet(r3)
 
-	for k, _ := range intersect(s1, intersect(s2, s3)) {
+	for k := range intersect(s1, intersect(s2, s3)) {
 		return k
 	}
 	return rune(0)
