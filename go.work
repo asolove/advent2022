@@ -4,3 +4,4 @@ use ./d01
 use ./d02
 use ./d03
 use ./d04
+use ./d06
