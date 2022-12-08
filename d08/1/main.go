@@ -50,7 +50,6 @@ func rotate[T bool | int](grid [][]T) {
 	max := len(grid) - 1
 	for r := 0; r < max/2; r++ {
 		for c := 0; c < max/2+1; c++ {
-			// grid[r][c], grid[c][r] = grid[c][r], grid[r][c]
 			grid[r][c], grid[c][max-r], grid[max-r][max-c], grid[max-c][r] = grid[max-c][r], grid[r][c], grid[c][max-r], grid[max-r][max-c]
 		}
 	}
