@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -13,17 +14,28 @@ func main() {
 	pairs := readPairs(os.Stdin)
 	// fmt.Printf("Read pairs:\n%v\n", pairs)
 
-	rightSum := 0
+	d1_t := &Tree{Node{n: 2, t: nil}}
+	d1 := Tree{Node{t: d1_t}}
+	d2_t := &Tree{Node{n: 6, t: nil}}
+	d2 := Tree{Node{t: d2_t}}
 
-	for i, pair := range pairs {
-		// fmt.Printf("Comparing %v to %v\n", pair[0], pair[1])
-		if compare(pair[0], pair[1]) > 0 {
-			// fmt.Printf("  In right order\n")
-			rightSum += i + 1
+	packets := []Tree{d1, d2}
+	for _, pair := range pairs {
+		packets = append(packets, pair[0], pair[1])
+	}
+
+	sort.SliceStable(packets, func(i, j int) bool {
+		return compare(packets[i], packets[j]) > 0
+	})
+
+	key := 1
+	for i, packet := range packets {
+		if len(packet) == 1 && (packet[0].t == d1_t || packet[0].t == d2_t) {
+			key *= i + 1
 		}
 	}
 
-	fmt.Printf("Sum of correct indices: %d\n", rightSum)
+	fmt.Printf("Key:\n%v\n", key)
 }
 
 // Returns 1 if in right order, 0 if tied, -1 if wrong
