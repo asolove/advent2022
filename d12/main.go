@@ -16,36 +16,43 @@ func main() {
 }
 
 func shortestPath(g *Graph) int {
-	// initialize to_consider to just start node
-	var pq PriorityQueue
-	g.start._shortestPath = 0
-	pq.Push(&PathItem{fScore: 0, gScore: guessDist(g.start, g.end), node: g.start})
-
 	best := math.MaxInt
+	for _, start := range g.starts {
+		var pq PriorityQueue
+		start._shortestPath = 0
+		pq.Push(&PathItem{fScore: 0, gScore: guessDist(start, g.end), node: start})
 
-	for !pq.Empty() {
-		current := pq.Pop()
-		if current.node == g.end {
-			if current.fScore < best {
-				best = current.fScore
+		for !pq.Empty() {
+			current := pq.Pop()
+			if current.node == g.end {
+				if current.fScore < best {
+					best = current.fScore
+				}
+				continue
 			}
-			continue
-		}
 
-		for _, n2 := range current.node.links {
-			if n2._shortestPath > current.fScore+1 {
-				fmt.Printf("Considering %d %d\n", n2.row, n2.col)
-				n2._shortestPath = current.fScore + 1
-				pq.Push(&PathItem{
-					fScore: n2._shortestPath,
-					gScore: n2._shortestPath + guessDist(n2, g.end),
-					node:   n2,
-				})
+			for _, n2 := range current.node.links {
+				if n2._shortestPath > current.fScore+1 {
+					fmt.Printf("Considering %d %d\n", n2.row, n2.col)
+					n2._shortestPath = current.fScore + 1
+					pq.Push(&PathItem{
+						fScore: n2._shortestPath,
+						gScore: n2._shortestPath + guessDist(n2, g.end),
+						node:   n2,
+					})
+				}
 			}
 		}
 	}
-
 	return best
+}
+
+func reset(g *Graph) {
+	for _, row := range g.nodes {
+		for _, node := range row {
+			node._shortestPath = math.MaxInt
+		}
+	}
 }
 
 func guessDist(from, to *Node) int {
@@ -99,9 +106,9 @@ func (pq *PriorityQueue) Pop() *PathItem {
 }
 
 type Graph struct {
-	nodes [][]*Node
-	start *Node
-	end   *Node
+	nodes  [][]*Node
+	starts []*Node
+	end    *Node
 }
 
 type Node struct {
@@ -123,8 +130,8 @@ func makeGraph(m [][]rune) *Graph {
 				col:           c,
 				_shortestPath: math.MaxInt,
 			}
-			if height == 'S' {
-				g.start = &n
+			if height == 'S' || height == 'a' {
+				g.starts = append(g.starts, &n)
 				height = 'a'
 			}
 			if height == 'E' {
