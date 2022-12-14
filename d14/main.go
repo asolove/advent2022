@@ -12,8 +12,8 @@ func main() {
 	lines := readLines(os.Stdin)
 	fmt.Printf("lines: %v\n", lines)
 
-	minX := 500
-	maxX := 500
+	minX := 300
+	maxX := 700
 	minY := 0
 	maxY := 0
 	for _, l := range lines {
@@ -36,9 +36,13 @@ func main() {
 
 	grid := make([][]rune, maxX-minX+1)
 	for i := 0; i < maxX-minX+1; i++ {
-		grid[i] = make([]rune, maxY-minY+1)
-		for j := 0; j < maxY-minY+1; j++ {
-			grid[i][j] = ' '
+		grid[i] = make([]rune, maxY-minY+3)
+		for j := 0; j < maxY-minY+3; j++ {
+			if j == maxY-minY+2 {
+				grid[i][j] = '#'
+			} else {
+				grid[i][j] = ' '
+			}
 		}
 	}
 	fmt.Printf("%d x %d\n", len(grid), len(grid[0]))
@@ -76,11 +80,11 @@ func main() {
 	}
 
 	for i := 0; true; i++ {
-		r := dropSand(grid, 500-minX, 0-minY)
-		// fmt.Printf("After turn %d:", i)
+		dropSand(grid, 500-minX, 0-minY)
+		// fmt.Printf("After turn %d:\n", i)
 		// printGrid(grid)
-		if r {
-			fmt.Printf("Continues forever after %d units\n", i)
+		if grid[500-minX][-minY] != ' ' {
+			fmt.Printf("Stacked up to root after %d units\n", i)
 			break
 		}
 	}
