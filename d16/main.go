@@ -2,9 +2,8 @@ package main
 
 import (
 	"bufio"
-	"container/heap"
 	"fmt"
-	"math/bits"
+	"math"
 	"os"
 	"regexp"
 	"strconv"
@@ -14,175 +13,205 @@ import (
 const MAX_TIME = 30
 
 func main() {
-	valves, aa_id := read(os.Stdin)
-	valvesWorthTurning := len(valves)
-	for _, v := range valves {
+	valves := read(os.Stdin)
+	valves_to_open := make([]int, 0)
+	for i, v := range valves {
 		if v.rate == 0 {
-			valvesWorthTurning--
-		}
-	}
-	fmt.Printf("%v, %d, %v", valves, aa_id, valves[aa_id])
-
-	max := findMaxPressure(valves, aa_id, valvesWorthTurning)
-	fmt.Printf("Max: %d\n", max)
-}
-
-func findMaxPressure(vs Valves, aa_id int, valvesWorthTurning int) int {
-	return search(
-		State{loc: aa_id, minute: 0, opened: 0, rate: 0, total: 0},
-		func(s *State) bool { return s.minute >= MAX_TIME },
-		func(s *State) int { return s.total },
-		func(s *State) []*State { return nextStates(s, vs, valvesWorthTurning) },
-	)
-}
-
-func nextStates(s *State, vs Valves, vwt int) []*State {
-	ss := make([]*State, 0)
-
-	// Done as much as we can, give up
-	if bits.OnesCount64(s.opened) >= vwt {
-		ss = append(ss, &State{
-			loc:    s.loc,
-			minute: MAX_TIME,
-			opened: s.opened,
-			rate:   s.rate,
-			total:  s.total + (MAX_TIME-s.minute)*s.rate,
-		})
-		return ss
-	}
-
-	// open a valve
-	if s.opened&(1<<s.loc) == 0 {
-		ss = append(ss, &State{
-			loc:    s.loc,
-			minute: s.minute + 1,
-			opened: s.opened | (1 << s.loc),
-			rate:   s.rate + vs[s.loc].rate,
-			total:  s.total + s.rate,
-		})
-	}
-
-	// walk down each path
-	for _, loc := range vs[s.loc].next {
-		ss = append(ss, &State{
-			loc:    loc,
-			minute: s.minute + 1,
-			opened: s.opened,
-			rate:   s.rate,
-			total:  s.total + s.rate,
-		})
-	}
-	return ss
-}
-
-func search(start State, done func(*State) bool, score func(*State) int, next func(*State) []*State) int {
-	max := 0
-	i := 0
-
-	var pq PriorityQueue
-	pq.Push(&start)
-	heap.Init(&pq)
-
-	for !pq.Empty() {
-		i++
-		if i%100000000 == 0 {
-			fmt.Printf("After %d steps, max: %d, candidates: %d\n", i, max, len(pq))
-		}
-
-		current := heap.Pop(&pq).(*State)
-		if done(current) {
-			if current.total > max {
-				max = current.total
-			}
 			continue
 		}
+		valves_to_open = append(valves_to_open, i)
+	}
 
-		for _, s := range next(current) {
-			heap.Push(&pq, s)
+	ds := distances(valves)
+
+	ps := make(chan []int)
+	r := make(chan int)
+	// go func() { ps <- []int{1, 3, 9, 8, 5, 4}; close(ps) }()
+	go permuteValves(valves_to_open, ps)
+	go scorePermutations(ps, r, ds, valves)
+	go scorePermutations(ps, r, ds, valves)
+	go scorePermutations(ps, r, ds, valves)
+	go scorePermutations(ps, r, ds, valves)
+	go scorePermutations(ps, r, ds, valves)
+	go scorePermutations(ps, r, ds, valves)
+	go scorePermutations(ps, r, ds, valves)
+	go scorePermutations(ps, r, ds, valves)
+	go scorePermutations(ps, r, ds, valves)
+
+	for score := range r {
+		fmt.Printf("One high score: %d\n", score)
+	}
+}
+
+func scorePermutations(ps chan []int, r chan int, ds [][]int, valves Valves) {
+	max := 0
+	var best []int
+	for p := range ps {
+		score := scorePermutation(p, ds, valves)
+		if score > max {
+			max = score
+			best = p
+			fmt.Printf("Best score: %d via %s\n", max, permutationString(best, valves))
+		}
+	}
+	fmt.Printf("Best path: %v\n", permutationString(best, valves))
+	r <- max
+}
+
+func permutationString(p []int, valves Valves) string {
+	s := fmt.Sprintf("%v: ", p)
+	for _, id := range p {
+		s += valves[id].name + " - "
+	}
+	return s
+}
+
+// optimum for test: DD - BB - JJ - HH - EE - CC
+func scorePermutation(perm []int, ds [][]int, valves Valves) int {
+	time := 1
+	total := 0
+	rate := 0
+	loc := 0
+
+	for _, goal := range perm {
+		// fmt.Printf("Time %d: at %s, releasing %d pressure\n", time, valves[loc].name, rate)
+		dtime := ds[loc][goal]
+		if time+dtime > MAX_TIME {
+			break
+		}
+		// fmt.Printf("  Walking %dm to %s\n", dtime, valves[goal].name)
+		total += rate * dtime
+		time += dtime
+
+		// fmt.Printf("  Opening valve %s\n", valves[goal].name)
+		rate += valves[goal].rate
+		total += rate
+		time += 1
+		loc = goal
+	}
+
+	if time < MAX_TIME {
+		total += rate * (MAX_TIME - time)
+		time = MAX_TIME
+		// fmt.Printf("Time %d: releasing %d pressure\n", time, rate)
+	}
+	return total
+}
+
+func distances(valves Valves) [][]int {
+	ds := make([][]int, len(valves))
+	for i, v := range valves {
+		ds[i] = make([]int, len(valves))
+		for j, _ := range valves {
+			ds[i][j] = math.MaxInt
+		}
+		for _, v2 := range v.next {
+			ds[i][v2] = 1
+		}
+		ds[i][i] = 0
+	}
+
+	for _, _ = range valves {
+		for from, _ := range valves {
+			for to, _ := range valves {
+				if ds[from][to] <= 2 {
+					continue
+				}
+
+				for via, _ := range valves {
+					if via == from || via == to {
+						continue
+					}
+					d1 := ds[from][via]
+					d2 := ds[via][to]
+					if d1 == math.MaxInt || d2 == math.MaxInt {
+						continue
+					}
+					vd := d1 + d2
+					if vd < ds[from][to] {
+						ds[from][to] = vd
+					}
+				}
+			}
 		}
 	}
 
-	return max
+	// for fromId, fromV := range valves {
+	// 	for toId, toV := range valves {
+	// 		fmt.Printf("%s->%s: %d\n", fromV.name, toV.name, ds[fromId][toId])
+	// 	}
+	// }
+
+	return ds
 }
 
-type PriorityQueue []*State
-
-func (s *State) Score() int {
-	return s.total + ((MAX_TIME - s.minute) * s.rate)
+func permuteValves(values []int, r chan []int) {
+	i := 0
+	for p := make([]int, len(values)); p[0] < len(p); nextPerm(p) {
+		if i%10000 == 0 {
+			// fmt.Printf("Generating permutation %d\n", i)
+		}
+		i++
+		r <- getPerm(values, p)
+	}
+	close(r)
 }
 
-func (pq PriorityQueue) Len() int    { return len(pq) }
-func (pq PriorityQueue) Empty() bool { return pq.Len() == 0 }
-
-func (pq PriorityQueue) Less(i, j int) bool {
-	return pq[i].Score() > pq[j].Score()
+func nextPerm(p []int) {
+	for i := len(p) - 1; i >= 0; i-- {
+		if i == 0 || p[i] < len(p)-i-1 {
+			p[i]++
+			return
+		}
+		p[i] = 0
+	}
 }
 
-func (pq PriorityQueue) Swap(i, j int) {
-	pq[i], pq[j] = pq[j], pq[i]
-	pq[i].index = i
-	pq[j].index = j
-}
-
-func (pq *PriorityQueue) Push(x any) {
-	n := len(*pq)
-	item := x.(*State)
-	item.index = n
-	*pq = append(*pq, item)
-}
-
-func (pq *PriorityQueue) Pop() any {
-	old := *pq
-	n := len(old)
-	item := old[n-1]
-	old[n-1] = nil  // avoid memory leak
-	item.index = -1 // for safety
-	*pq = old[0 : n-1]
-	return item
-}
-
-type State struct {
-	loc    int
-	minute int
-	opened uint64
-	rate   int
-	total  int
-	index  int
+func getPerm(orig, p []int) []int {
+	result := append([]int{}, orig...)
+	for i, v := range p {
+		result[i], result[i+v] = result[i+v], result[i]
+	}
+	return result
 }
 
 type Valves map[int]*Valve
 
 type Valve struct {
+	name string
 	rate int
 	next []int
 }
 
-func read(f *os.File) (Valves, int) {
+func read(f *os.File) Valves {
 	vs := make(Valves, 0)
 	s := bufio.NewScanner(f)
-	id := 0
-	aa_id := 0
-	ids := make(map[string]int)
 	re := regexp.MustCompile(`^Valve (\S\S) has flow rate=(\d+); tunnels? leads? to valves? (.*)$`)
+
+	// Track mapping of names to ids
+	id := 0
+	ids := make(map[string]int)
+
+	// Ensure starting point has id 0
+	intern("AA", ids)
+
 	for s.Scan() {
 		match := re.FindAllStringSubmatch(s.Text(), -1)[0]
 		name := match[1]
 		id = intern(name, ids)
-		if match[1] == "AA" {
-			aa_id = id
-		}
 		next := make([]int, 0)
 		for _, s := range strings.Split(match[3], ", ") {
 			next_id := intern(s, ids)
 			next = append(next, next_id)
 		}
 		vs[id] = &Valve{
+			name: name,
 			rate: atoi(match[2]),
 			next: next,
 		}
 		id++
 	}
-	return vs, aa_id
+	return vs
 }
 
 func intern(name string, lookup map[string]int) int {
