@@ -6,3 +6,5 @@ use ./d03
 use ./d04
 use ./d06
 use ./d15
+use ./d16
+use ./d17
