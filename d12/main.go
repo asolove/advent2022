@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"container/heap"
 	"fmt"
 	"math"
 	"os"
@@ -21,9 +22,10 @@ func shortestPath(g *Graph) int {
 		var pq PriorityQueue
 		start._shortestPath = 0
 		pq.Push(&PathItem{fScore: 0, gScore: guessDist(start, g.end), node: start})
+		heap.Init(&pq)
 
 		for !pq.Empty() {
-			current := pq.Pop()
+			current := heap.Pop(&pq).(*PathItem)
 			if current.node == g.end {
 				if current.fScore < best {
 					best = current.fScore
@@ -33,9 +35,9 @@ func shortestPath(g *Graph) int {
 
 			for _, n2 := range current.node.links {
 				if n2._shortestPath > current.fScore+1 {
-					fmt.Printf("Considering %d %d\n", n2.row, n2.col)
+					// fmt.Printf("Considering %d %d\n", n2.row, n2.col)
 					n2._shortestPath = current.fScore + 1
-					pq.Push(&PathItem{
+					heap.Push(&pq, &PathItem{
 						fScore: n2._shortestPath,
 						gScore: n2._shortestPath + guessDist(n2, g.end),
 						node:   n2,
@@ -88,14 +90,14 @@ func (pq PriorityQueue) Swap(i, j int) {
 	pq[j].index = j
 }
 
-func (pq *PriorityQueue) Push(x *PathItem) {
+func (pq *PriorityQueue) Push(x any) {
 	n := len(*pq)
-	item := x
+	item := x.(*PathItem)
 	item.index = n
 	*pq = append(*pq, item)
 }
 
-func (pq *PriorityQueue) Pop() *PathItem {
+func (pq *PriorityQueue) Pop() any {
 	old := *pq
 	n := len(old)
 	item := old[n-1]
