@@ -13,19 +13,19 @@ const GOAL_STEPS = 1000000000000
 const MAX_SHAPES = 2022
 
 func main() {
-	run(os.Stdin)
+	wind := readWind(os.Stdin)
+	run(wind, MAX_SHAPES)
 }
 
-func run(f *os.File) {
+func run(wind []int, maxShapes int) int {
 	shapes := allShapes()
-	wind := readWind(f)
 	steps := 0
 	board := NewBoard()
 
-	for i := 0; i < MAX_SHAPES; i++ {
-		if i%(MAX_SHAPES/10) == 0 {
-			fmt.Printf("At shape %d\n", i)
-		}
+	for i := 0; i < maxShapes; i++ {
+		// if i%(maxShapes/10) == 0 {
+		// 	fmt.Printf("At shape %d\n", i)
+		// }
 		board.AddShape(&shapes[i%len(shapes)])
 		// fmt.Printf("At step %d, adding shape %d:\n%v\n", steps, i, board)
 		falling := true
@@ -35,9 +35,10 @@ func run(f *os.File) {
 			steps++
 		}
 	}
-	fmt.Printf("After shape %d:\n", MAX_SHAPES)
-	fmt.Printf("Board:\n%v\n", board)
-	fmt.Printf("At end, height: %d\n", board.height)
+	// fmt.Printf("After shape %d:\n", maxShapes)
+	// fmt.Printf("Board:\n%v\n", board)
+	// fmt.Printf("At end, height: %d\n", board.height)
+	return board.height
 }
 
 type Board struct {
@@ -185,12 +186,13 @@ func (b *Board) ShapeAt(x, y int) bool {
 // point on the shape's grid (which in some cases is not in the shape itself)
 type Shape struct {
 	coords [][2]int
+	mask   uint64
 	width  int
 	height int
 }
 
 func allShapes() []Shape {
-	return []Shape{
+	shapes := []Shape{
 		// horizontal line
 		{
 			coords: [][2]int{{0, 0}, {1, 0}, {2, 0}, {3, 0}},
@@ -223,6 +225,28 @@ func allShapes() []Shape {
 			height: 2,
 		},
 	}
+	for _, s := range shapes {
+		s.mask = uint64(0)
+		for _, coord := range s.coords {
+			s.mask |= coordToMask(coord[0], coord[1])
+		}
+	}
+	return shapes
+}
+
+func showBlock(bs ...uint64) string {
+	r := ""
+	for i := 7; i >= 0; i-- {
+		for _, b := range bs {
+			r += fmt.Sprintf("%8b\n", byte(0xff&(b>>(8*i))))
+		}
+		r += "\n"
+	}
+	return r
+}
+
+func coordToMask(x, y int) uint64 {
+	return 1 << (x + y*8)
 }
 
 func readWind(f *os.File) []int {
@@ -238,18 +262,4 @@ func readWind(f *os.File) []int {
 		r = append(r, dir)
 	}
 	return r
-}
-
-func min(i, j int) int {
-	if i > j {
-		return j
-	}
-	return i
-}
-
-func max(i, j int) int {
-	if i > j {
-		return i
-	}
-	return j
 }
