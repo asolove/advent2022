@@ -10,7 +10,7 @@ const WIDTH = 7
 
 // Best: 65s for 1/1000 of total
 const GOAL_STEPS = 1000000000000
-const MAX_SHAPES = 100000000
+const MAX_SHAPES = 2022
 
 func main() {
 	run(os.Stdin)
@@ -36,7 +36,7 @@ func run(f *os.File) {
 		}
 	}
 	fmt.Printf("After shape %d:\n", MAX_SHAPES)
-	// fmt.Printf("Board:\n%v\n", board)
+	fmt.Printf("Board:\n%v\n", board)
 	fmt.Printf("At end, height: %d\n", board.height)
 }
 
@@ -95,8 +95,12 @@ func (b *Board) get(x, y int) bool {
 }
 
 func (b *Board) set(x, y int) {
+	maxY := len(b.grid) - 1
+	if y > maxY {
+		b.addRows(y - maxY)
+	}
 	if y >= b.height {
-		b.addRows(y - b.height + 1)
+		b.height = y + 1
 	}
 	b.grid[y-b.gridOffset] = setBit(x, b.grid[y-b.gridOffset])
 }
@@ -106,12 +110,12 @@ func (b *Board) validSpot() bool {
 		return false
 	}
 	if b.sy >= b.height {
-		return b.sx >= 0 && b.sx+b.shape.width < WIDTH
+		return b.sx >= 0 && b.sx+b.shape.width <= WIDTH
 	}
 	if b.sx < 0 || b.sx+b.shape.width > WIDTH {
 		return false
 	}
-	for _, coord := range b.shape.collCoords {
+	for _, coord := range b.shape.coords {
 		x := coord[0] + b.sx
 		y := coord[1] + b.sy
 		if b.get(x, y) {
@@ -133,11 +137,6 @@ func (b *Board) AddShape(s *Shape) {
 func (b *Board) addRows(n int) {
 	for ; n > 0; n-- {
 		b.grid = append(b.grid, byte(0))
-		b.height++
-	}
-	if len(b.grid) > 200 {
-		b.grid = b.grid[100:]
-		b.gridOffset += 100
 	}
 }
 
@@ -185,49 +184,43 @@ func (b *Board) ShapeAt(x, y int) bool {
 // A shape is defined by its coordinates relative to the bottom-left-most
 // point on the shape's grid (which in some cases is not in the shape itself)
 type Shape struct {
-	coords     [][2]int
-	collCoords [][2]int
-	width      int
-	height     int
+	coords [][2]int
+	width  int
+	height int
 }
 
 func allShapes() []Shape {
 	return []Shape{
 		// horizontal line
 		{
-			coords:     [][2]int{{0, 0}, {1, 0}, {2, 0}, {3, 0}},
-			collCoords: [][2]int{{0, 0}, {1, 0}, {2, 0}, {3, 0}},
-			width:      4,
-			height:     1,
+			coords: [][2]int{{0, 0}, {1, 0}, {2, 0}, {3, 0}},
+			width:  4,
+			height: 1,
 		},
 		// plus
 		{
-			coords:     [][2]int{{1, 0}, {0, 1}, {1, 1}, {2, 1}, {1, 2}},
-			collCoords: [][2]int{{1, 0}, {0, 1}, {2, 1}},
-			width:      3,
-			height:     3,
+			coords: [][2]int{{1, 0}, {0, 1}, {1, 1}, {2, 1}, {1, 2}},
+			width:  3,
+			height: 3,
 		},
 
 		// flipped L
 		{
-			coords:     [][2]int{{0, 0}, {1, 0}, {2, 0}, {2, 1}, {2, 2}},
-			collCoords: [][2]int{{0, 0}, {1, 0}, {2, 0}},
-			width:      3,
-			height:     3,
+			coords: [][2]int{{0, 0}, {1, 0}, {2, 0}, {2, 1}, {2, 2}},
+			width:  3,
+			height: 3,
 		},
 		// vertical line
 		{
-			coords:     [][2]int{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
-			collCoords: [][2]int{{0, 0}},
-			width:      1,
-			height:     4,
+			coords: [][2]int{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
+			width:  1,
+			height: 4,
 		},
 		// square
 		{
-			coords:     [][2]int{{0, 0}, {0, 1}, {1, 0}, {1, 1}},
-			collCoords: [][2]int{{0, 0}, {1, 0}},
-			width:      2,
-			height:     2,
+			coords: [][2]int{{0, 0}, {0, 1}, {1, 0}, {1, 1}},
+			width:  2,
+			height: 2,
 		},
 	}
 }
