@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-const MAX_TIME = 30
+const MAX_TIME = 26
 
 func main() {
 	valves := read(os.Stdin)
@@ -24,9 +24,31 @@ func main() {
 		valvesToOpen = append(valvesToOpen, i)
 	}
 
+	// Model two-player version as:
+	// For each way to split valves into two sets:
+	//  - Add together the best score for each set
+	best := 0
 	ds := distances(valves)
-	best := findBest(valves, valvesToOpen, ds)
-	fmt.Printf("Best: %v", best)
+	for i := uint64(0); i < uint64(math.Pow(2, float64(len(valvesToOpen)))); i++ {
+		v1 := make([]int, 0)
+		v2 := make([]int, 0)
+		for j := 0; j < len(valvesToOpen); j++ {
+			if i&(1<<j) > 0 {
+				v1 = append(v1, valvesToOpen[j])
+			} else {
+				v2 = append(v2, valvesToOpen[j])
+			}
+		}
+		// fmt.Printf("Considering split: %v v. %v\n", v1, v2)
+
+		score := findBest(valves, v1, ds) + findBest(valves, v2, ds)
+		if score > best {
+			best = score
+			fmt.Printf("New best: %d\n", best)
+		}
+	}
+
+	fmt.Printf("Best: %v\n", best)
 }
 
 func findBest(valves Valves, valvesToOpen []int, ds [][]int) int {
@@ -43,7 +65,6 @@ func findBest(valves Valves, valvesToOpen []int, ds [][]int) int {
 			score := scoreState(current)
 			if score > best {
 				best = score
-				fmt.Printf("New best: %d\n", best)
 			}
 		} else {
 			next := nextStates(current, valves, valvesToOpen, ds)
@@ -51,12 +72,6 @@ func findBest(valves Valves, valvesToOpen []int, ds [][]int) int {
 				heap.Push(&pq, ns)
 			}
 		}
-		// if current is done
-		// compare score
-
-		// else
-		// generate list of next states
-		// push them into pq
 	}
 	return best
 }
