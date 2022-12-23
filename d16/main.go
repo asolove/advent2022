@@ -2,8 +2,10 @@ package main
 
 import (
 	"bufio"
+	"container/heap"
 	"fmt"
 	"math"
+	"math/bits"
 	"os"
 	"regexp"
 	"strconv"
@@ -14,88 +16,126 @@ const MAX_TIME = 30
 
 func main() {
 	valves := read(os.Stdin)
-	valves_to_open := make([]int, 0)
+	valvesToOpen := make([]int, 0)
 	for i, v := range valves {
 		if v.rate == 0 {
 			continue
 		}
-		valves_to_open = append(valves_to_open, i)
+		valvesToOpen = append(valvesToOpen, i)
 	}
 
 	ds := distances(valves)
-
-	ps := make(chan []int)
-	r := make(chan int)
-	// go func() { ps <- []int{1, 3, 9, 8, 5, 4}; close(ps) }()
-	go permuteValves(valves_to_open, ps)
-	go scorePermutations(ps, r, ds, valves)
-	go scorePermutations(ps, r, ds, valves)
-	go scorePermutations(ps, r, ds, valves)
-	go scorePermutations(ps, r, ds, valves)
-	go scorePermutations(ps, r, ds, valves)
-	go scorePermutations(ps, r, ds, valves)
-	go scorePermutations(ps, r, ds, valves)
-	go scorePermutations(ps, r, ds, valves)
-	go scorePermutations(ps, r, ds, valves)
-
-	for score := range r {
-		fmt.Printf("One high score: %d\n", score)
-	}
+	best := findBest(valves, valvesToOpen, ds)
+	fmt.Printf("Best: %v", best)
 }
 
-func scorePermutations(ps chan []int, r chan int, ds [][]int, valves Valves) {
-	max := 0
-	var best []int
-	for p := range ps {
-		score := scorePermutation(p, ds, valves)
-		if score > max {
-			max = score
-			best = p
-			fmt.Printf("Best score: %d via %s\n", max, permutationString(best, valves))
+func findBest(valves Valves, valvesToOpen []int, ds [][]int) int {
+	best := 0
+
+	var pq PriorityQueue
+	startState := State{}
+	pq.Push(&startState)
+	heap.Init(&pq)
+
+	for !pq.Empty() {
+		current := pq.Pop().(*State)
+		if doneState(current, len(valvesToOpen)) {
+			score := scoreState(current)
+			if score > best {
+				best = score
+				fmt.Printf("New best: %d\n", best)
+			}
+		} else {
+			next := nextStates(current, valves, valvesToOpen, ds)
+			for _, ns := range next {
+				heap.Push(&pq, ns)
+			}
 		}
+		// if current is done
+		// compare score
+
+		// else
+		// generate list of next states
+		// push them into pq
 	}
-	fmt.Printf("Best path: %v\n", permutationString(best, valves))
-	r <- max
+	return best
 }
 
-func permutationString(p []int, valves Valves) string {
-	s := fmt.Sprintf("%v: ", p)
-	for _, id := range p {
-		s += valves[id].name + " - "
-	}
-	return s
-}
+func nextStates(s *State, valves Valves, valvesToOpen []int, ds [][]int) []*State {
+	nexts := make([]*State, 0)
 
-// optimum for test: DD - BB - JJ - HH - EE - CC
-func scorePermutation(perm []int, ds [][]int, valves Valves) int {
-	time := 1
-	total := 0
-	rate := 0
-	loc := 0
+	// FIXME: filter to just unopened ones
+	nextValves := valvesToOpen
 
-	for _, goal := range perm {
-		// fmt.Printf("Time %d: at %s, releasing %d pressure\n", time, valves[loc].name, rate)
-		dtime := ds[loc][goal]
-		if time+dtime > MAX_TIME {
-			break
+	for _, nv := range nextValves {
+		openedWithNext := (1 << nv) | s.opened
+		if openedWithNext == s.opened {
+			continue
 		}
-		// fmt.Printf("  Walking %dm to %s\n", dtime, valves[goal].name)
-		total += rate * dtime
-		time += dtime
-
-		// fmt.Printf("  Opening valve %s\n", valves[goal].name)
-		rate += valves[goal].rate
-		total += rate
-		time += 1
-		loc = goal
+		dt := ds[s.loc][nv]
+		next := State{
+			time:   s.time + dt + 1,
+			opened: openedWithNext,
+			rate:   s.rate + valves[nv].rate,
+			total:  s.total + s.rate*(dt+1),
+			loc:    nv,
+		}
+		next.gScore = scoreState(&next)
+		nexts = append(nexts, &next)
 	}
 
-	if time < MAX_TIME {
-		total += rate * (MAX_TIME - time)
-		time = MAX_TIME
-		// fmt.Printf("Time %d: releasing %d pressure\n", time, rate)
-	}
-	return total
+	return nexts
+}
+
+func scoreState(s *State) int {
+	return s.total + (s.rate * (MAX_TIME - s.time))
+}
+
+func doneState(s *State, valveCount int) bool {
+	return s.time >= MAX_TIME || bits.OnesCount64(s.opened) >= valveCount
+}
+
+type State struct {
+	gScore int
+	index  int
+
+	time   int
+	total  int
+	rate   int
+	loc    int
+	opened uint64
+}
+
+type PriorityQueue []*State
+
+func (pq PriorityQueue) Len() int    { return len(pq) }
+func (pq PriorityQueue) Empty() bool { return pq.Len() == 0 }
+
+func (pq PriorityQueue) Less(i, j int) bool {
+	return pq[i].gScore < pq[j].gScore
+}
+
+func (pq PriorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+	pq[i].index = i
+	pq[j].index = j
+}
+
+func (pq *PriorityQueue) Push(x any) {
+	n := len(*pq)
+	item := x.(*State)
+	item.index = n
+	*pq = append(*pq, item)
+}
+
+func (pq *PriorityQueue) Pop() any {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil  // avoid memory leak
+	item.index = -1 // for safety
+	*pq = old[0 : n-1]
+	return item
 }
 
 func distances(valves Valves) [][]int {
