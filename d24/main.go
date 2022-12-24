@@ -12,8 +12,10 @@ func main() {
 	valley := read(os.Stdin)
 	fmt.Printf("Valley:\n%v\n", valley)
 
-	best := valley.ShortestPath()
-	fmt.Printf("Shortest path: %d\n", best)
+	partA := valley.ShortestPath(State{1, 0}, State{valley.width - 2, valley.height - 1})
+	partB := valley.ShortestPath(State{valley.width - 2, valley.height - 1}, State{1, 0})
+	partC := valley.ShortestPath(State{1, 0}, State{valley.width - 2, valley.height - 1})
+	fmt.Printf("Shortest path: %d + %d + %d = %d\n", partA, partB, partC, partA+partB+partC)
 }
 
 type Valley struct {
@@ -29,15 +31,15 @@ type State struct {
 
 const MAX_STEPS = 1000
 
-func (v *Valley) ShortestPath() int {
-	states := map[string]bool{"1,0": true}
+func (v *Valley) ShortestPath(from, to State) int {
+	states := map[string]bool{key(from.x, from.y): true}
 
 	moves := [][2]int{{0, 0}, {0, 1}, {0, -1}, {1, 0}, {-1, 0}}
 
 	for i := 1; i <= MAX_STEPS; i++ {
 		v.Step()
 		ls := v.Locations()
-		fmt.Printf("At step %d, considering %d possibilities:\n", i, len(states))
+		// fmt.Printf("At step %d, considering %d possibilities:\n", i, len(states))
 
 		newStates := make(map[string]bool)
 		for k, _ := range states {
@@ -48,7 +50,7 @@ func (v *Valley) ShortestPath() int {
 				if x2 < 0 || y2 < 0 {
 					continue
 				}
-				if x2 == v.width-2 && y2 == v.height-1 {
+				if x2 == to.x && y2 == to.y {
 					return i
 				}
 				if _, found := ls[key(x+dx, y+dy)]; !found {
