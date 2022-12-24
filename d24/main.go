@@ -8,22 +8,57 @@ import (
 	"strings"
 )
 
-const STEPS = 18
-
 func main() {
 	valley := read(os.Stdin)
 	fmt.Printf("Valley:\n%v\n", valley)
 
-	for i := 1; i <= STEPS; i++ {
-		valley.Step()
-		fmt.Printf("Valley after %d steps:\n%v\n", i, valley)
-	}
+	best := valley.ShortestPath()
+	fmt.Printf("Shortest path: %d\n", best)
 }
 
 type Valley struct {
 	width     int
 	height    int
 	blizzards []*Blizzard
+}
+
+type State struct {
+	x int
+	y int
+}
+
+const MAX_STEPS = 1000
+
+func (v *Valley) ShortestPath() int {
+	states := map[string]bool{"1,0": true}
+
+	moves := [][2]int{{0, 0}, {0, 1}, {0, -1}, {1, 0}, {-1, 0}}
+
+	for i := 1; i <= MAX_STEPS; i++ {
+		v.Step()
+		ls := v.Locations()
+		fmt.Printf("At step %d, considering %d possibilities:\n", i, len(states))
+
+		newStates := make(map[string]bool)
+		for k, _ := range states {
+			x, y := coords(k)
+			for _, move := range moves {
+				dx, dy := move[0], move[1]
+				x2, y2 := x+dx, y+dy
+				if x2 < 0 || y2 < 0 {
+					continue
+				}
+				if x2 == v.width-2 && y2 == v.height-1 {
+					return i
+				}
+				if _, found := ls[key(x+dx, y+dy)]; !found {
+					newStates[key(x+dx, y+dy)] = true
+				}
+			}
+		}
+		states = newStates
+	}
+	return -1
 }
 
 func (v *Valley) Step() {
