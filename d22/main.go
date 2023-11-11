@@ -8,9 +8,119 @@ import (
 )
 
 func main() {
-	grid, directions := read(os.Stdin)
-	fmt.Printf("Grid:\n%v\n\nDirections:\n%v\n", grid, directions)
+	m, directions := read(os.Stdin)
+	fmt.Printf("Grid:\n%v\n\nDirections:\n%v\n", m, directions)
+
+	endState := MoveAll(m, directions)
+	fmt.Printf("Finish state: %v\n", endState)
+	fmt.Printf("Score: %v\n", Score(endState))
 }
+
+func StartState(m *Map) *State {
+	y := 0
+	x := 0
+	for ; x <= m.maxX; x++ {
+		if _, ok := m.grid[key(x, y)]; ok {
+			break
+		}
+	}
+	return &State{x: x, y: y, heading: East}
+}
+
+func MoveAll(m *Map, directions []int) *State {
+	s := StartState(m)
+	for i := 0; i < len(directions); i++ {
+		s = Move(m, s, directions[i])
+		i++
+		s = Turn(s, directions[i])
+	}
+	return s
+}
+
+func Score(s *State) int {
+	return 1000*(s.y+1) + 4*(s.x+1) + int(s.heading)
+}
+
+func Move(m *Map, state *State, n int) *State {
+	x := state.x
+	y := state.y
+	for i := 0; i < n; i++ {
+		nextX, nextY := Step(m, state.heading, x, y)
+		blocked, ok := m.grid[key(nextX, nextY)]
+		if !ok {
+			fmt.Errorf("Step resulted in an invalid space: %v, %v", nextX, nextY)
+		}
+		if blocked {
+			break
+		} else {
+			x, y = nextX, nextY
+		}
+	}
+	return &State{x: x, y: y, heading: state.heading}
+}
+
+func Turn(state *State, direction int) *State {
+	heading := state.heading
+	if direction == Left {
+		heading = heading - 1
+		if heading < 0 {
+			heading = 3
+		}
+	} else {
+		heading = heading + 1
+		if heading > 3 {
+			heading = 0
+		}
+	}
+	return &State{x: state.x, y: state.y, heading: heading}
+}
+
+func Step(m *Map, h Heading, x, y int) (int, int) {
+	nextX, nextY := x, y
+	switch h {
+	case North:
+		nextY -= 1
+		if nextY < 0 {
+			nextY = m.maxY
+		}
+	case South:
+		nextY += 1
+		if nextY > m.maxY {
+			nextY = 0
+		}
+	case East:
+		nextX += 1
+		if nextX > m.maxX {
+			nextX = 0
+		}
+	case West:
+		nextX -= 1
+		if nextX < 0 {
+			nextX = m.maxX
+		}
+	}
+
+	if _, ok := m.grid[key(nextX, nextY)]; ok {
+		return nextX, nextY
+	} else {
+		return Step(m, h, nextX, nextY)
+	}
+}
+
+type State struct {
+	x       int
+	y       int
+	heading Heading
+}
+
+type Heading int
+
+const (
+	East  Heading = iota
+	South         = iota
+	West          = iota
+	North         = iota
+)
 
 type Map struct {
 	maxX int
